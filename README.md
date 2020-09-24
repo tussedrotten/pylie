@@ -1,2 +1,17 @@
 # pylie
-A small Lie library for Python
+A small Lie library for Python.
+
+This library represents rotations and poses in 3D.
+It also implements group and Lie operations, as well as their Jacobians.
+
+## Install library
+You can install this library to your Python environment directly from this repository using `pip`:
+```bash
+pip install https://github.com/tussedrotten/pylie/archive/master.zip
+```
+
+This library depends upon numpy.
+The examples and tests have further dependencies, see [requirements.txt](requirements.txt).
+
+## Examples
+[poses_and_cameras_example.py](examples/poses_and_cameras_example.py)

@@ -143,8 +143,8 @@ class SO3:
     def action(self, x):
         """Perform the action of the SO(3) element on the 3D column vector x.
 
-        :param x: 3D column vector to be transformed
-        :return: The resulting rotated 3D column vector
+        :param x: 3D column vector to be transformed (or a matrix of 3D column vectors)
+        :return: The resulting rotated 3D column vectors
         """
         return self.matrix @ x
 
@@ -240,14 +240,14 @@ class SO3:
     def __mul__(self, other):
         """Multiplication operator performs action on vectors.
 
-        :param other: 3D column vector
-        :return: Transformed 3D column vector
+        :param other: 3D column vector, or a matrix of 3D column vectors
+        :return: Transformed 3D column vectors
         """
-        if isinstance(other, np.ndarray) and other.shape == (3, 1):
-            # Other is 3D column vector, perform action on vector.
+        if isinstance(other, np.ndarray) and other.shape[0] == 3:
+            # Other is matrix of 3D column vectors, perform action on vectors.
             return self.action(other)
         else:
-            raise TypeError('Argument must be a 3D column vector')
+            raise TypeError('Argument must be a matrix of 3D column vectors')
 
     def __matmul__(self, other):
         """Matrix multiplication operator performs composition on elements of SO(3).
