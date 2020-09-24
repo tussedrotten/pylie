@@ -14,5 +14,5 @@ This library depends upon numpy.
 The examples and tests have further dependencies, see [requirements.txt](requirements.txt).
 
 ## Examples
-[left_right_perturbations.py](examples/left_right_perturbations.py)
-[poses_and_cameras.py](examples/poses_and_cameras.py)
+- [left_right_perturbations.py](examples/left_right_perturbations.py)
+- [poses_and_cameras.py](examples/poses_and_cameras.py)
