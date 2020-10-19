@@ -234,6 +234,14 @@ class SE3:
         """
         return self.ominus(X)
 
+    def __len__(self):
+        """Length operator returns the dimension of the tangent vector space,
+        which is equal to the number of degrees of freedom (DOF).
+
+        :return: The DOF for poses (6)
+        """
+        return 6
+
     @staticmethod
     def hat(xi_vec):
         """Performs the hat operator on the tangent space vector xi_vec,

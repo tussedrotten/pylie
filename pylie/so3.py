@@ -261,6 +261,14 @@ class SO3:
         else:
             raise TypeError('Argument must be an SO3')
 
+    def __len__(self):
+        """Length operator returns the dimension of the tangent vector space,
+        which is equal to the number of degrees of freedom (DOF).
+
+        :return: The DOF for rotations (3)
+        """
+        return 3
+
     @staticmethod
     def hat(theta_vec):
         """Performs the hat operator on the tangent space vector theta_vec,

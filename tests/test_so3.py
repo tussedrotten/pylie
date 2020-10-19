@@ -457,3 +457,10 @@ def test_jacobian_Y_ominus_X_wrt_Y():
     delta = 1e-3 * np.ones((3, 1))
     taylor_diff = Y.oplus(delta).ominus(X) - (Y.ominus(X) + (J_ominus_Y @ delta))
     np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 6)
+
+
+def test_has_len_that_returns_correct_dimension():
+    X = SO3()
+
+    # Should have 6 DOF.
+    np.testing.assert_equal(len(X), 3)
