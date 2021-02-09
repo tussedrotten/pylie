@@ -15,4 +15,6 @@ The examples and tests have further dependencies, see [requirements.txt](require
 
 ## Examples
 - [left_right_perturbations.py](examples/left_right_perturbations.py)
+- [pose_interpolation.py](examples/pose_interpolation.py)
 - [poses_and_cameras.py](examples/poses_and_cameras.py)
+- [vis_perturbations.py](examples/vis_perturbations.py)
