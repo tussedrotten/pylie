@@ -430,3 +430,10 @@ def test_has_len_that_returns_correct_dimension():
 
     # Should have 6 DOF.
     np.testing.assert_equal(len(X), 6)
+
+
+def test_string_representation_is_matrix():
+    X = SE3()
+
+    # Should be the same as the string representation of the matrix.
+    np.testing.assert_equal(str(X), str(X.to_matrix()))

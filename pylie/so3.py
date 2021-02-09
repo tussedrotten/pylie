@@ -269,6 +269,22 @@ class SO3:
         """
         return 3
 
+    def __repr__(self):
+        """Formal string representation of the object.
+
+        :return: The formal representation as a string
+        """
+        return "SO3(\n" + repr(self.matrix) + "\n)"
+
+    def __str__(self):
+        """Informal string representation of the object
+        prints the matrix representation.
+
+        :return: The matrix representation as a string
+        """
+        return str(self.matrix)
+
+
     @staticmethod
     def hat(theta_vec):
         """Performs the hat operator on the tangent space vector theta_vec,
