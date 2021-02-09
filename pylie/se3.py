@@ -242,6 +242,21 @@ class SE3:
         """
         return 6
 
+    def __repr__(self):
+        """Formal string representation of the object.
+
+        :return: The formal representation as a string
+        """
+        return "SE3({\n" + repr(self.rotation) + ",\n" + repr(self.translation) + "\n})"
+
+    def __str__(self):
+        """Informal string representation of the object
+        prints the matrix representation.
+
+        :return: The matrix representation as a string
+        """
+        return str(self.to_matrix())
+
     @staticmethod
     def hat(xi_vec):
         """Performs the hat operator on the tangent space vector xi_vec,
