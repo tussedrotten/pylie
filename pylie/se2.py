@@ -1,6 +1,7 @@
 import numpy as np
 from pylie import SO2
 
+
 class SE2:
     """Represents an element of the SO(2) Lie group (rotations in 2D)."""
 
@@ -14,28 +15,28 @@ class SE2:
 
     @property
     def rotation(self):
-        """ The so3 rotation, an element of SO(3)
+        """ The so2 rotation, an element of SO(2)
 
-        :return: An SO3 object corresponding to the orientation.
+        :return: An SO2 object corresponding to the orientation.
         """
         return self._rotation
 
     @rotation.setter
-    def rotation(self, so3):
+    def rotation(self, so2):
         """Sets the rotation
 
-        :param so3: An SO3
+        :param so2: An SO2
         """
-        if not isinstance(so3, SO2):
-            raise TypeError('Rotation must be a SO3')
+        if not isinstance(so2, SO2):
+            raise TypeError('Rotation must be a SO2')
 
-        self._rotation = so3
+        self._rotation = so2
 
     @property
     def translation(self):
-        """The translation, a 3D column vector
+        """The translation, a 2D column vector
 
-        :return: A 3D column vector corresponding to the translation.
+        :return: A 2D column vector corresponding to the translation.
         """
         return self._translation
 
@@ -43,10 +44,10 @@ class SE2:
     def translation(self, t):
         """Sets the translation
 
-        :param t: 3D column vector
+        :param t: 2D column vector
         """
         if not isinstance(t, np.ndarray) and t.shape == (2, 1):
-            raise TypeError('Translation must be a 3D column vector')
+            raise TypeError('Translation must be a 2D column vector')
 
         self._translation = t
 
@@ -60,59 +61,124 @@ class SE2:
         T[0:2, 2] = self.translation.T
         return T
 
-    def Log(self):
-        """Computes the tangent space vector at the current element X.
+    def to_tuple(self):
+        """Return the tuple representation of this pose
 
-        :return: The tangent space vector theta_vec, or angle, axis if split_angle_axis is True.
+        :return: (R (2x2 matrix), t (2D column vector)
         """
-        return self.angle
+        return (self.rotation.to_matrix(), self.translation)
+
+    def Log(self):
+        """Computes the tangent space vector xi_vec at the current element X.
+
+        :return: The tangent space vector xi_vec = [rho_vec, theta]^T.
+        """
+        theta = self.rotation.Log()
+
+        if theta == 0:
+            return np.vstack((self.translation, 0))
+
+        a = np.sin(theta) / theta
+        b = (1 - np.cos(theta)) / theta
+
+        V_inv = (1.0 / (a**2 + b**2)) * np.array([[a, b], [-b, a]])
+        rho_vec = V_inv @ self.translation
+
+        return np.vstack((rho_vec, theta))
+
+    def jac_inverse_X_wrt_X(X):
+        """Computes the Jacobian of the inverse operation X.inverse() with respect to the element X.
+
+        :return: The Jacobian (3x3 matrix)
+        """
+        return -X.adjoint()
+
+    def jac_action_Xx_wrt_X(X, x):
+        """Computes the Jacobian of the action X.action(x) with respect to the element X.
+
+        :param x: The 2D column vector x.
+        :return: The Jacobian (3x2 matrix)
+        """
+        return np.block([[X.rotation.to_matrix(), X.rotation.to_matrix() @ SO2.hat(1) @ x]])
+
+    def jac_action_Xx_wrt_x(X):
+        """Computes the Jacobian of the action X.action(x) with respect to the element X.
+
+        :return: The Jacobian (2x2 matrix)
+        """
+        return X.rotation.to_matrix()
+
+    # def jac_Y_ominus_X_wrt_X(Y, X):
+    #     """Compute the Jacobian of Y.ominus(X) with respect to the element X.
+    #
+    #     :param X: The SE(3) element X.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     return -SE3.jac_left_inverse(Y - X)
+
+    # def jac_Y_ominus_X_wrt_Y(Y, X):
+    #     """Compute the Jacobian of Y.ominus(X) with respect to the element Y.
+    #
+    #     :param X: The SE(3) element X.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     return SE3.jac_right_inverse(Y - X)
 
     def inverse(self):
         """Compute the inverse of the current element X.
 
         :return: The inverse of the current element.
         """
-        return SO2(-self.angle)
+        rot_inv = self.rotation.inverse()
+        return SE2((rot_inv, -(rot_inv * self.translation)))
 
     def action(self, x):
-        """Perform the action of the SO(3) element on the 3D column vector x.
+        """Perform the action of the SE(2) element on the 2D column vector x.
 
-        :param x: 3D column vector to be transformed (or a matrix of 3D column vectors)
-        :return: The resulting rotated 3D column vectors
+        :param x: 2D column vector to be transformed (or a matrix of 2D column vectors)
+        :return: The resulting rotated and translated 2D column vectors
         """
-        return self.to_matrix @ x
+        return self.rotation * x + self.translation
 
-    def compose(self, Y):
+    def compose(X, Y):
         """Compose this element with another element on the right
 
-        :param Y: The other SO3 element
+        :param Y: The other SE2 element
         :return: This element composed with Y
         """
-        return SO2(self.angle + Y.angle)
+        return SE2((X.rotation @ Y.rotation, X.rotation * Y.translation + X.translation))
 
     def adjoint(self):
         """The adjoint at the element.
-        :return: The adjoint, a 3x3 rotation matrix.
+        :return: The adjoint, a 3x3 matrix.
         """
-        return 1.0
+        R = self.rotation.to_matrix()
+        t = self.translation
 
-    def oplus(self, theta):
+        return np.block([[R, -SO2.hat(1.0) @ t],
+                         [np.zeros((1, 2)), 1.0]])
+
+    def oplus(X, xi_vec):
         """Computes the right perturbation of Exp(theta_vec) on the element X.
 
-        :param theta_vec: The tangent space vector, a 3D column vector.
-        :return: The perturbed SO3 element Y = X :math:`\\oplus` theta_vec.
+        :param theta_vec: The tangent space vector, a 2D column vector.
+        :return: The perturbed SE2 element Y = X :math:`\\oplus` theta_vec.
         """
 
-        return self @ SO2.Exp(theta)
+        if not (isinstance(xi_vec, np.ndarray) and xi_vec.shape == (3, 1)):
+            raise TypeError('Argument must be a 3D column vector')
 
-    def ominus(self, X):
+        return X @ SE2.Exp(xi_vec)
+
+    def ominus(Y, X):
         """Computes the tangent space vector at X between X and this element Y.
 
         :param X: The other element
-        :return: The difference theta_vec = Y :math:'\\ominus' X
+        :return: The difference xi_vec = Y :math:'\\ominus' X
         """
-
-        return self.angle - X.angle
+        if not isinstance(X, SE2):
+            raise TypeError('Argument must be an SE2')
+        return (X.inverse() @ Y).Log()
 
     def __add__(self, theta_vec):
         """Add operator performs the "oplus" operation on the element X.
@@ -148,11 +214,11 @@ class SE2:
         :param other: Other SO3
         :return: Composed SO3
         """
-        if isinstance(other, SO2):
-            # Other is SO3, perform composition.
+        if isinstance(other, SE2):
+            # Other is SE2, perform composition.
             return self.compose(other)
         else:
-            raise TypeError('Argument must be an SO3')
+            raise TypeError('Argument must be an SE2')
 
     def __len__(self):
         """Length operator returns the dimension of the tangent vector space,
@@ -167,7 +233,7 @@ class SE2:
 
         :return: The formal representation as a string
         """
-        return "SO2(\n" + repr(self.to_matrix()) + "\n)"
+        return "SE2(\n" + repr(self.to_matrix()) + "\n)"
 
     def __str__(self):
         """Informal string representation of the object
@@ -179,32 +245,162 @@ class SE2:
 
 
     @staticmethod
-    def hat(theta):
-        """Performs the hat operator on the tangent space vector theta_vec,
-        which returns the corresponding skew symmetric Lie Algebra matrix theta_hat.
+    def hat(xi_vec):
+        """Performs the hat operator on the tangent space vector xi_vec,
+        which returns the corresponding Lie Algebra matrix xi_hat.
 
-        :param theta_vec: 3d tangent space column vector.
+        :param xi_vec: 3d tangent space column vector xi_vec = [rho_vec, theta]^T.
         :return: The Lie Algebra (3x3 matrix).
         """
-        return np.array([[0, -theta],
-                         [theta, 0]])
+        return np.block([[SO2.hat(xi_vec[2].item()), xi_vec[:2]],
+                         [np.zeros((1, 3))]])
 
     @staticmethod
-    def vee(theta_hat):
-        """Performs the vee operator on the skew symmetric Lie Algebra matrix theta_hat,
+    def vee(xi_hat):
+        """Performs the vee operator on the Lie Algebra matrix xi_hat,
         which returns the corresponding tangent space vector.
 
-        :param theta_hat: The Lie Algebra (3x3 matrix)
-        :return: 3d tangent space column vector.
+        :param xi_hat: The Lie Algebra (3x3 matrix)
+        :return: 3d tangent space column vector xi_vec = [rho_vec, theta]^T.
         """
-        return theta_hat[1, 0]
+        return np.vstack((xi_hat[:2, 2:3], SO2.vee(xi_hat[:2, :2])))
 
     @staticmethod
-    def Exp(theta):
-        """Computes the Exp-map on the Lie algebra vector theta_vec,
+    def Exp(xi_vec):
+        """Computes the Exp-map on the Lie algebra vector xi_vec,
         which transfers it to the corresponding Lie group element.
 
-        :param theta_vec: 3d tangent space column vector.
-        :return: Corresponding SO(3) element
+        :param xi_vec: 3d tangent space column vector xi_vec = [rho_vec, theta]^T.
+        :return: Corresponding SE(2) element
         """
-        return SO2(theta)
+        rho_vec = xi_vec[:2]
+        theta = xi_vec[2].item()
+
+        if np.abs(theta) < 1e-10:
+            return SE2((SO2(theta), rho_vec))
+
+        V = (np.sin(theta) / theta) * np.identity(2) + ((1 - np.cos(theta)) / theta) * SO2.hat(1)
+        return SE2((SO2(theta), V @ rho_vec))
+
+    @staticmethod
+    def jac_composition_XY_wrt_X(Y):
+        """Computes the Jacobian of the composition X.compose(Y) with respect to the element X.
+
+        :param Y: SE2 element Y
+        :return: The Jacobian (3x3 matrix)
+        """
+        R_Y_inv = Y.rotation.inverse().to_matrix()
+        return np.block([[R_Y_inv, (R_Y_inv @ SO2.hat(1.0) @ Y.translation)],
+                         [np.array([0, 0, 1])]])
+
+    @staticmethod
+    def jac_composition_XY_wrt_Y():
+        """Computes the Jacobian of the composition X.compose(Y) with respect to the element Y.
+
+        :return: The Jacobian (3x3 identity matrix)
+        """
+        return np.identity(3)
+
+    # @staticmethod
+    # def _Q_left(xi_vec):
+    #     rho_vec = xi_vec[:3]
+    #     theta_vec = xi_vec[3:]
+    #     theta = np.linalg.norm(theta_vec)
+    #
+    #     if theta < 1e-10:
+    #         return np.zeros((3, 3))
+    #
+    #     rho_hat = SO3.hat(rho_vec)
+    #     theta_hat = SO3.hat(theta_vec)
+    #
+    #     return 0.5 * rho_hat + ((theta - np.sin(theta)) / theta ** 3) * \
+    #            (theta_hat @ rho_hat + rho_hat @ theta_hat + theta_hat @ rho_hat @ theta_hat) - \
+    #            ((1 - 0.5 * theta ** 2 - np.cos(theta)) / theta ** 4) * \
+    #            (theta_hat @ theta_hat @ rho_hat + rho_hat @ theta_hat @ theta_hat -
+    #             3 * theta_hat @ rho_hat @ theta_hat) - \
+    #            0.5 * ((1 - 0.5 * theta ** 2 - np.cos(theta)) / theta ** 4 - 3 *
+    #                   ((theta - np.sin(theta) - (theta ** 3 / 6)) / theta ** 5)) * \
+    #            (theta_hat @ rho_hat @ theta_hat @ theta_hat + theta_hat @ theta_hat @ rho_hat @ theta_hat)
+    #
+    # @staticmethod
+    # def _Q_right(xi_vec):
+    #     return SE3._Q_left(-xi_vec)
+    #
+    # @staticmethod
+    # def jac_right(xi_vec):
+    #     """Compute the right derivative of Exp(xi_vec) with respect to xi_vec.
+    #
+    #     :param xi_vec: The tangent space 6D column vector xi_vec = [rho_vec, theta_vec]^T.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     theta_vec = xi_vec[3:]
+    #
+    #     J_r_theta = SO3.jac_right(theta_vec)
+    #     Q_r = SE3._Q_right(xi_vec)
+    #
+    #     return np.block([[J_r_theta, Q_r],
+    #                      [np.zeros((3, 3)), J_r_theta]])
+    #
+    # @staticmethod
+    # def jac_left(xi_vec):
+    #     """Compute the left derivative of Exp(xi_vec) with respect to xi_vec.
+    #
+    #     :param xi_vec: The tangent space 6D column vector xi_vec = [rho_vec, theta_vec]^T.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     theta_vec = xi_vec[3:]
+    #
+    #     J_l_theta = SO3.jac_left(theta_vec)
+    #     Q_l = SE3._Q_left(xi_vec)
+    #
+    #     return np.block([[J_l_theta, Q_l],
+    #                      [np.zeros((3, 3)), J_l_theta]])
+    #
+    # @staticmethod
+    # def jac_right_inverse(xi_vec):
+    #     """Compute the right derivative of Log(X) with respect to X for xi_vec = Log(X).
+    #
+    #     :param xi_vec: The tangent space 6D column vector xi_vec = [rho_vec, theta_vec]^T.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     theta_vec = xi_vec[3:]
+    #
+    #     J_r_inv_theta = SO3.jac_right_inverse(theta_vec)
+    #     Q_r = SE3._Q_right(xi_vec)
+    #
+    #     return np.block([[J_r_inv_theta, -J_r_inv_theta @ Q_r @ J_r_inv_theta],
+    #                      [np.zeros((3, 3)), J_r_inv_theta]])
+    #
+    # @staticmethod
+    # def jac_left_inverse(xi_vec):
+    #     """Compute the left derivative of Log(X) with respect to X for xi_vec = Log(X).
+    #
+    #     :param xi_vec: The tangent space 6D column vector xi_vec = [rho_vec, theta_vec]^T.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     theta_vec = xi_vec[3:]
+    #
+    #     J_l_inv_theta = SO3.jac_left_inverse(theta_vec)
+    #     Q_l = SE3._Q_left(xi_vec)
+    #
+    #     return np.block([[J_l_inv_theta, -J_l_inv_theta @ Q_l @ J_l_inv_theta],
+    #                      [np.zeros((3, 3)), J_l_inv_theta]])
+    #
+    # @staticmethod
+    # def jac_X_oplus_tau_wrt_X(xi_vec):
+    #     """Compute the Jacobian of X.oplus(tau) with respect to the element X
+    #
+    #     :param xi_vec: The tangent space 6D column vector xi_vec = [rho_vec, theta_vec]^T.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     return SE3.Exp(xi_vec).inverse().adjoint()
+    #
+    # @staticmethod
+    # def jac_X_oplus_tau_wrt_tau(xi_vec):
+    #     """Compute the Jacobian of X.oplus(tau) with respect to the tangent space vector tau
+    #
+    #     :param xi_vec: The tangent space 6D column vector xi_vec = [rho_vec, theta_vec]^T.
+    #     :return: The Jacobian (6x6 matrix)
+    #     """
+    #     return SE3.jac_right(xi_vec)
+

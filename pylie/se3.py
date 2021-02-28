@@ -284,7 +284,7 @@ class SE3:
         which transfers it to the corresponding Lie group element.
 
         :param xi_vec: 6d tangent space column vector xi_vec = [rho_vec, theta_vec]^T.
-        :return: Corresponding SO(3) element
+        :return: Corresponding SE(3) element
         """
         xi_hat = SE3.hat(xi_vec)
         theta = np.linalg.norm(xi_vec[3:])

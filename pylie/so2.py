@@ -26,6 +26,9 @@ class SO2:
 
         :param angle: The angle in radians.
         """
+        if isinstance(angle, np.ndarray):
+            angle = angle.item()
+
         self._angle = angle % (2 * np.pi)
 
     def to_matrix(self):
@@ -58,7 +61,7 @@ class SO2:
         :param x: 3D column vector to be transformed (or a matrix of 3D column vectors)
         :return: The resulting rotated 3D column vectors
         """
-        return self.to_matrix @ x
+        return self.to_matrix() @ x
 
     def compose(self, Y):
         """Compose this element with another element on the right
@@ -70,9 +73,9 @@ class SO2:
 
     def adjoint(self):
         """The adjoint at the element.
-        :return: The adjoint, a 3x3 rotation matrix.
+        :return: The adjoint, a 1x1 matrix.
         """
-        return 1.0
+        return np.array([1.0])
 
     def oplus(self, theta):
         """Computes the right perturbation of Exp(theta_vec) on the element X.
@@ -91,6 +94,44 @@ class SO2:
         """
 
         return self.angle - X.angle
+
+    def jac_inverse_X_wrt_X(X):
+        """Computes the Jacobian of the inverse operation X.inverse() with respect to the element X.
+
+        :return: The Jacobian (1x1 matrix)
+        """
+        return -np.array([1.0])
+
+    def jac_action_Xx_wrt_X(X, x):
+        """Computes the Jacobian of the action X.action(x) with respect to the element X.
+
+        :param x: The 2D column vector x.
+        :return: The Jacobian (2x1 matrix)
+        """
+        return X.to_matrix() @ SO2.hat(1.0) @ x
+
+    def jac_action_Xx_wrt_x(X):
+        """Computes the Jacobian of the action X.action(x) with respect to the element X.
+
+        :return: The Jacobian (2x2 matrix)
+        """
+        return X.to_matrix()
+
+    def jac_Y_ominus_X_wrt_X(Y, X):
+        """Compute the Jacobian of Y.ominus(X) with respect to the element X.
+
+        :param X: The SO(2) element X.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return -np.array([1.0])
+
+    def jac_Y_ominus_X_wrt_Y(Y, X):
+        """Compute the Jacobian of Y.ominus(X) with respect to the element Y.
+
+        :param X: The SO(2) element X.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
 
     def __add__(self, theta_vec):
         """Add operator performs the "oplus" operation on the element X.
@@ -138,7 +179,7 @@ class SO2:
 
         :return: The DOF for rotations (3)
         """
-        return 3
+        return 1
 
     def __repr__(self):
         """Formal string representation of the object.
@@ -175,7 +216,7 @@ class SO2:
         :param theta_hat: The Lie Algebra (3x3 matrix)
         :return: 3d tangent space column vector.
         """
-        return theta_hat[1, 0]
+        return theta_hat[1, 0].item()
 
     @staticmethod
     def Exp(theta):
@@ -186,3 +227,74 @@ class SO2:
         :return: Corresponding SO(3) element
         """
         return SO2(theta)
+
+    @staticmethod
+    def jac_composition_XY_wrt_X(Y):
+        """Computes the Jacobian of the composition X.compose(Y) with respect to the element X.
+
+        :param Y: SO3 element Y
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
+
+    @staticmethod
+    def jac_composition_XY_wrt_Y():
+        """Computes the Jacobian of the composition X.compose(Y) with respect to the element Y.
+
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
+
+    @staticmethod
+    def jac_right(theta_vec):
+        """Compute the right derivative of Exp(theta_vec) with respect to theta_vec.
+
+        :param theta_vec: The tangent space 1D column vector.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
+
+    @staticmethod
+    def jac_left(theta_vec):
+        """Compute the left derivative of Exp(theta_vec) with respect to theta_vec.
+
+        :param theta_vec: The tangent space 1D column vector.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
+
+    @staticmethod
+    def jac_right_inverse(theta_vec):
+        """Compute the right derivative of Log(X) with respect to X for theta_vec = Log(X).
+
+        :param theta_vec: The tangent space 1D column vector.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
+
+    @staticmethod
+    def jac_left_inverse(theta_vec):
+        """Compute the left derivative of Log(X) with respect to X for theta_vec = Log(X).
+
+        :param theta_vec: The tangent space 3D column vector.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
+
+    @staticmethod
+    def jac_X_oplus_tau_wrt_X(theta_vec):
+        """Compute the Jacobian of X.oplus(tau) with respect to the element X
+
+        :param theta_vec: The tangent space 1D column vector.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
+
+    @staticmethod
+    def jac_X_oplus_tau_wrt_tau(theta_vec):
+        """Compute the Jacobian of X.oplus(tau) with respect to the tangent space vector tau
+
+        :param theta_vec: The tangent space 1D column vector.
+        :return: The Jacobian (1x1 matrix)
+        """
+        return np.array([1.0])
