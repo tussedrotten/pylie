@@ -18,17 +18,17 @@ def test_construct_with_tuple():
     np.testing.assert_equal(se2.translation, t)
 
 
-# def test_construct_with_matrix():
-#     so3 = SO3.from_roll_pitch_yaw(np.pi / 10, np.pi / 4, -np.pi / 2)
-#     t = np.array([[1, 2, 3]]).T
-#     T = np.block([[so3.matrix, t],
-#                   [0, 0, 0, 1]])
-#
-#     se3 = SE3.from_matrix(T)
-#
-#     np.testing.assert_almost_equal(se3.rotation.matrix, so3.matrix, 14)
-#     np.testing.assert_equal(se3.translation, t)
-#
+def test_construct_with_matrix():
+    so2 = SO2(np.pi / 10)
+    t = np.array([[1, 2]]).T
+    T = np.block([[so2.to_matrix(), t],
+                  [0, 0,  1]])
+
+    se2 = SE2.from_matrix(T)
+
+    np.testing.assert_almost_equal(se2.rotation.to_matrix(), so2.to_matrix(), 14)
+    np.testing.assert_equal(se2.translation, t)
+
 
 def test_to_matrix():
     so2 = SO2(np.pi / 4)
@@ -298,133 +298,127 @@ def test_jacobian_composition_XY_wrt_Y():
     np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 14)
 
 
-# def test_jacobian_right():
-#     rho_vec = np.array([[1, 2, 3]]).T
-#     theta_vec = 3 * np.pi / 4 * np.array([[1, -1, 1]]).T / np.sqrt(3)
-#     xi_vec = np.vstack((rho_vec, theta_vec))
-#
-#     J_r = SE3.jac_right(xi_vec)
-#
-#     # Test the Jacobian numerically.
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = SE3.Exp(xi_vec + delta) - (SE3.Exp(xi_vec) + J_r @ delta)
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 5)
-#
-#
-# def test_jacobian_left():
-#     rho_vec = np.array([[2, 1, 2]]).T
-#     theta_vec = np.pi / 4 * np.array([[-1, -1, -1]]).T / np.sqrt(3)
-#     xi_vec = np.vstack((rho_vec, theta_vec))
-#
-#     J_l = SE3.jac_left(xi_vec)
-#
-#     # Should have J_l(xi_vec) == J_r(-xi_vec).
-#     np.testing.assert_almost_equal(J_l, SE3.jac_right(-xi_vec), 14)
-#
-#     # Test the Jacobian numerically (using Exps and Logs, since left oplus and ominus have not been defined).
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = SE3.Log(SE3.Exp(xi_vec + delta) @ (SE3.Exp(J_l @ delta) @ SE3.Exp(xi_vec)).inverse())
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 5)
-#
-#
-# def test_jacobian_right_inverse():
-#     X = SE3((SO3.from_roll_pitch_yaw(np.pi / 8, np.pi / 2, 5 * np.pi / 6), np.array([[2, 1, 1]]).T))
-#     xi_vec = X.Log()
-#
-#     J_r_inv = SE3.jac_right_inverse(xi_vec)
-#
-#     # Should have J_l * J_r_inv = Exp(xi_vec).adjoint().
-#     J_l = SE3.jac_left(xi_vec)
-#     np.testing.assert_almost_equal(J_l @ J_r_inv, SE3.Exp(xi_vec).adjoint(), 14)
-#
-#     # Test the Jacobian numerically.
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = X.oplus(delta).Log() - (X.Log() + J_r_inv @ delta)
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 5)
-#
-#
-# def test_jacobian_left_inverse():
-#     X = SE3((SO3.from_roll_pitch_yaw(np.pi / 8, np.pi / 2, 5 * np.pi / 6), np.array([[2, 1, 1]]).T))
-#     xi_vec = X.Log()
-#
-#     J_l_inv = SE3.jac_left_inverse(xi_vec)
-#
-#     # Should have that left and right are block transposes of each other.
-#     J_r_inv = SE3.jac_right_inverse(xi_vec)
-#     np.testing.assert_almost_equal(J_l_inv[:3, :3], J_r_inv[:3, :3].T, 14)
-#     np.testing.assert_almost_equal(J_l_inv[:3, 3:], J_r_inv[:3, 3:].T, 14)
-#     np.testing.assert_almost_equal(J_l_inv[3:, 3:], J_r_inv[3:, 3:].T, 14)
-#
-#     # Test the Jacobian numerically (using Exps and Logs, since left oplus and ominus have not been defined).
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = (SE3.Exp(delta) @ X).Log() - (X.Log() + J_l_inv @ delta)
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 5)
-#
-#
-# def test_jacobian_X_oplus_tau_wrt_X():
-#     X = SE3((SO3.from_roll_pitch_yaw(np.pi / 10, -np.pi / 3, 3 * np.pi / 4), np.array([[3, 2, 1]]).T))
-#     rho_vec = np.array([[2, 1, 2]]).T
-#     theta_vec = np.pi / 4 * np.array([[-1, -1, -1]]).T / np.sqrt(3)
-#     xi_vec = np.vstack((rho_vec, theta_vec))
-#
-#     J_oplus_X = X.jac_X_oplus_tau_wrt_X(xi_vec)
-#
-#     # Should be Exp(tau).adjoint().inverse()
-#     np.testing.assert_almost_equal(J_oplus_X, np.linalg.inv(SE3.Exp(xi_vec).adjoint()), 14)
-#
-#     # Test the Jacobian numerically.
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = X.oplus(delta).oplus(xi_vec) - X.oplus(xi_vec).oplus(J_oplus_X @ delta)
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 14)
-#
-#
-# def test_jacobian_X_oplus_tau_wrt_tau():
-#     X = SE3((SO3.from_roll_pitch_yaw(np.pi / 8, np.pi / 2, 5 * np.pi / 6), np.array([[2, 1, 1]]).T))
-#     rho_vec = np.array([[2, 1, 2]]).T
-#     theta_vec = np.pi / 4 * np.array([[-1, -1, -1]]).T / np.sqrt(3)
-#     xi_vec = np.vstack((rho_vec, theta_vec))
-#
-#     J_oplus_tau = X.jac_X_oplus_tau_wrt_tau(xi_vec)
-#
-#     # Should be J_r.
-#     np.testing.assert_equal(J_oplus_tau, X.jac_right(xi_vec))
-#
-#     # Test the Jacobian numerically.
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = X.oplus(xi_vec + delta) - X.oplus(xi_vec).oplus(J_oplus_tau @ delta)
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 6)
-#
-#
-# def test_jacobian_Y_ominus_X_wrt_X():
-#     X = SE3((SO3.from_roll_pitch_yaw(np.pi / 8, np.pi / 2, 5 * np.pi / 6), np.array([[2, 1, 1]]).T))
-#     Y = SE3((SO3.from_roll_pitch_yaw(np.pi / 7, np.pi / 3, 4 * np.pi / 6), np.array([[2, 1, 0]]).T))
-#
-#     J_ominus_X = Y.jac_Y_ominus_X_wrt_X(X)
-#
-#     # Should be -J_l_inv.
-#     np.testing.assert_equal(J_ominus_X, -SE3.jac_left_inverse(Y - X))
-#
-#     # Test the Jacobian numerically.
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = Y.ominus(X.oplus(delta)) - (Y.ominus(X) + (J_ominus_X @ delta))
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 6)
-#
-#
-# def test_jacobian_Y_ominus_X_wrt_Y():
-#     X = SE3((SO3.from_roll_pitch_yaw(np.pi / 8, np.pi / 2, 5 * np.pi / 6), np.array([[2, 1, 1]]).T))
-#     Y = SE3((SO3.from_roll_pitch_yaw(np.pi / 7, np.pi / 3, 4 * np.pi / 6), np.array([[2, 1, 0]]).T))
-#
-#     J_ominus_Y = Y.jac_Y_ominus_X_wrt_Y(X)
-#
-#     # Should be J_r_inv.
-#     np.testing.assert_equal(J_ominus_Y, SE3.jac_right_inverse(Y - X))
-#
-#     # Test the Jacobian numerically.
-#     delta = 1e-3 * np.ones((6, 1))
-#     taylor_diff = Y.oplus(delta).ominus(X) - (Y.ominus(X) + (J_ominus_Y @ delta))
-#     np.testing.assert_almost_equal(taylor_diff, np.zeros((6, 1)), 6)
-#
-#
+def test_jacobian_right():
+    rho_vec = np.array([[1, 2]]).T
+    theta = 3 * np.pi / 4
+    xi_vec = np.vstack((rho_vec, theta))
+
+    J_r = SE2.jac_right(xi_vec)
+
+    # Test the Jacobian numerically.
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = SE2.Exp(xi_vec + delta) - (SE2.Exp(xi_vec) + J_r @ delta)
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 5)
+
+
+def test_jacobian_left():
+    rho_vec = np.array([[2, 1]]).T
+    theta = np.pi / 4
+    xi_vec = np.vstack((rho_vec, theta))
+
+    J_l = SE2.jac_left(xi_vec)
+
+    # Should have J_l(xi_vec) == J_r(-xi_vec).
+    np.testing.assert_almost_equal(J_l, SE2.jac_right(-xi_vec), 14)
+
+    # Test the Jacobian numerically (using Exps and Logs, since left oplus and ominus have not been defined).
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = SE2.Log(SE2.Exp(xi_vec + delta) @ (SE2.Exp(J_l @ delta) @ SE2.Exp(xi_vec)).inverse())
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 5)
+
+
+def test_jacobian_right_inverse():
+    X = SE2((SO2(np.pi / 8), np.array([[1, 1]]).T))
+    xi_vec = X.Log()
+
+    J_r_inv = SE2.jac_right_inverse(xi_vec)
+
+    # Should have J_l * J_r_inv = Exp(xi_vec).adjoint().
+    J_l = SE2.jac_left(xi_vec)
+    np.testing.assert_almost_equal(J_l @ J_r_inv, SE2.Exp(xi_vec).adjoint(), 14)
+
+    # Test the Jacobian numerically.
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = X.oplus(delta).Log() - (X.Log() + J_r_inv @ delta)
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 5)
+
+
+def test_jacobian_left_inverse():
+    X = SE2((SO2(np.pi / 8), np.array([[2, 1]]).T))
+    xi_vec = X.Log()
+
+    J_l_inv = SE2.jac_left_inverse(xi_vec)
+
+    # Test the Jacobian numerically (using Exps and Logs, since left oplus and ominus have not been defined).
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = (SE2.Exp(delta) @ X).Log() - (X.Log() + J_l_inv @ delta)
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 5)
+
+
+def test_jacobian_X_oplus_tau_wrt_X():
+    X = SE2((SO2(np.pi / 10), np.array([[3, 2]]).T))
+    rho_vec = np.array([[1, 2]]).T
+    theta = np.pi / 4
+    xi_vec = np.vstack((rho_vec, theta))
+
+    J_oplus_X = X.jac_X_oplus_tau_wrt_X(xi_vec)
+
+    # Should be Exp(tau).adjoint().inverse()
+    np.testing.assert_almost_equal(J_oplus_X, np.linalg.inv(SE2.Exp(xi_vec).adjoint()), 14)
+
+    # Test the Jacobian numerically.
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = X.oplus(delta).oplus(xi_vec) - X.oplus(xi_vec).oplus(J_oplus_X @ delta)
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 14)
+
+
+def test_jacobian_X_oplus_tau_wrt_tau():
+    X = SE2((SO2(np.pi / 8), np.array([[1, 2]]).T))
+    rho_vec = np.array([[2, 1]]).T
+    theta = np.pi / 4
+    xi_vec = np.vstack((rho_vec, theta))
+
+    J_oplus_tau = X.jac_X_oplus_tau_wrt_tau(xi_vec)
+
+    # Should be J_r.
+    np.testing.assert_equal(J_oplus_tau, X.jac_right(xi_vec))
+
+    # Test the Jacobian numerically.
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = X.oplus(xi_vec + delta) - X.oplus(xi_vec).oplus(J_oplus_tau @ delta)
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 6)
+
+
+def test_jacobian_Y_ominus_X_wrt_X():
+    X = SE2((SO2(np.pi / 8), np.array([[1, 1]]).T))
+    Y = SE2((SO2(np.pi / 7), np.array([[1, 0]]).T))
+
+    J_ominus_X = Y.jac_Y_ominus_X_wrt_X(X)
+
+    # Should be -J_l_inv.
+    np.testing.assert_equal(J_ominus_X, -SE2.jac_left_inverse(Y - X))
+
+    # Test the Jacobian numerically.
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = Y.ominus(X.oplus(delta)) - (Y.ominus(X) + (J_ominus_X @ delta))
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 6)
+
+
+def test_jacobian_Y_ominus_X_wrt_Y():
+    X = SE2((SO2(np.pi / 8), np.array([[1, 1]]).T))
+    Y = SE2((SO2(np.pi / 7), np.array([[2, 0]]).T))
+
+    J_ominus_Y = Y.jac_Y_ominus_X_wrt_Y(X)
+
+    # Should be J_r_inv.
+    np.testing.assert_equal(J_ominus_Y, SE2.jac_right_inverse(Y - X))
+
+    # Test the Jacobian numerically.
+    delta = 1e-3 * np.ones((3, 1))
+    taylor_diff = Y.oplus(delta).ominus(X) - (Y.ominus(X) + (J_ominus_Y @ delta))
+    np.testing.assert_almost_equal(taylor_diff, np.zeros((3, 1)), 6)
+
+
 def test_has_len_that_returns_correct_dimension():
     X = SE2()
 

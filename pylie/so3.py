@@ -1,4 +1,5 @@
 import numpy as np
+from pylie.common import to_rotation_matrix
 
 
 class SO3:
@@ -89,25 +90,7 @@ class SO3:
         :param R: 3x3 matrix
         """
         # This is slower than necessary, but ensures correct representation.
-        self._matrix = SO3.to_so3_matrix(R)
-
-    @staticmethod
-    def to_so3_matrix(R):
-        """Fits an arbitrary 3x3 matrix to the closest element on SO(3)
-
-        :param R: An arbitrary 3x3 matrix
-        :return: The closest valid 3x3 rotation matrix
-        """
-        if not (isinstance(R, np.ndarray) and R.shape == (3, 3)):
-            raise TypeError('Argument must be a 3x3 matrix')
-
-        u, s, v = np.linalg.svd(R)
-        R = u.dot(v)
-
-        if np.linalg.det(R) < 0:
-            R = -R
-
-        return R
+        self._matrix = to_rotation_matrix(R)
 
     def Log(self, split_angle_axis=False):
         """Computes the tangent space vector at the current element X.

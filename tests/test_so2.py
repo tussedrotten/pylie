@@ -9,21 +9,21 @@ def test_construct_identity_with_no_args():
     np.testing.assert_array_equal(so2.to_matrix(), np.identity(2))
 
 
-# def test_construct_with_matrix():
-#     R = np.array([[0, 0, 1],
-#                   [1, 0, 0],
-#                   [0, 1, 0]])
-#     so3 = SO2(R)
-#     np.testing.assert_array_equal(so3.matrix, R)
-#
-#     # Matrices not elements of SO(3) should be fitted to SO(3)
-#     R_noisy = R + 0.1 + np.random.rand(3)
-#     so3_fitted = SO3(R_noisy)
-#     R_fitted = so3_fitted.matrix
-#
-#     assert np.any(np.not_equal(R_fitted, R_noisy))
-#     np.testing.assert_almost_equal(np.linalg.det(R_fitted), 1, 14)
-#     np.testing.assert_almost_equal((R_fitted.T @ R_fitted), np.identity(3), 14)
+def test_construct_from_matrix():
+    theta = np.pi/3
+    R = SO2(theta).to_matrix()
+    so2 = SO2.from_matrix(R)
+    np.testing.assert_equal(so2.angle, theta)
+    np.testing.assert_array_equal(so2.to_matrix(), R)
+
+    # Matrices not elements of SO(2) should be fitted to SO(2)
+    R_noisy = R + 0.1 + np.random.rand(2)
+    so2_fitted = SO2.from_matrix(R_noisy)
+    R_fitted = so2_fitted.to_matrix()
+
+    assert np.any(np.not_equal(R_fitted, R_noisy))
+    np.testing.assert_almost_equal(np.linalg.det(R_fitted), 1, 14)
+    np.testing.assert_almost_equal((R_fitted.T @ R_fitted), np.identity(2), 14)
 
 
 def test_hat_returns_skew_symmetric_matrix():
@@ -160,41 +160,6 @@ def test_difference_for_simple_rotation_with_operator_works():
     np.testing.assert_almost_equal(theta_diff, theta, 14)
 
 
-# def test_to_rotation_matrix_results_in_valid_rotation():
-#     A = np.random.rand(3, 3)
-#     R = SO3.to_so3_matrix(A)
-#     np.testing.assert_almost_equal(R @ R.T, np.identity(3), 14)
-#     np.testing.assert_almost_equal(np.linalg.det(R), 1, 14)
-
-
-# def test_to_rotation_matrix_results_in_close_rotation():
-#     angle = 0.5 * np.pi
-#     axis = np.array([[1, 0, 0]]).T
-#     R = SO3.Exp(angle * axis).matrix
-#
-#     # Invalidate a valid rotation matrix by scaling it.
-#     R_scaled = 3 * R
-#
-#     # Fit to SO(3).
-#     R_closest = SO3.to_so3_matrix(R_scaled)
-#
-#     # Result should be the same rotation matrix.
-#     np.testing.assert_almost_equal(R_closest, R, 14)
-#
-#     # Perturb the rotation matrix with random noise.
-#     R_noisy = R + 0.01 * np.random.rand(3, 3)
-#
-#     # Fit to SO(3)
-#     so3_closest = SO3(R_noisy)
-#
-#     # Extract angle-axis representation.
-#     angle_closest, axis_closest = so3_closest.Log(True)
-#
-#     # Result should be close to the same rotation.
-#     np.testing.assert_almost_equal(angle_closest, angle, 2)
-#     np.testing.assert_almost_equal(axis_closest, axis, 2)
-#
-#
 def test_jacobian_inverse():
     X = SO2(np.pi / 3)
 

@@ -16,7 +16,7 @@ class SE3:
     @classmethod
     def from_matrix(cls, T):
         """Construct an SE(3) element corresponding from a pose matrix.
-        The rotation is fitted to the closest rotation matrix, the bottom row of a 4x4 matrix is ignored.
+        The rotation is fitted to the closest rotation matrix, the bottom row of the 4x4 matrix is ignored.
 
         :param T: 4x4 or 3x4 pose matrix.
         :return: The SE(3) element.

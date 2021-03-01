@@ -1,4 +1,5 @@
 import numpy as np
+from pylie.common import to_rotation_matrix
 
 
 class SO2:
@@ -11,6 +12,17 @@ class SO2:
         :param angle: The rotation angle in radians (optional).
         """
         self.angle = angle
+
+    @classmethod
+    def from_matrix(cls, R):
+        """Construct an SO(2) element from a matrix.
+        The rotation is fitted to the closest rotation matrix
+
+        :param T: 2x2 rotation matrix.
+        :return: The SO(2) element.
+        """
+        R = to_rotation_matrix(R)
+        return cls(np.arctan2(R[1, 0], R[0, 0]))
 
     @property
     def angle(self):
