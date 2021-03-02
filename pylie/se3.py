@@ -9,14 +9,14 @@ class SE3:
         """Constructs an SE(3) element.
         The default is the identity element.
 
-        :param pose_tuple: A tuple (rot3, t) (optional).
+        :param pose_tuple: A tuple (rotation (SO3), translation (3D column vector) (optional).
         """
         self.rotation, self.translation = pose_tuple
 
     @classmethod
     def from_matrix(cls, T):
         """Construct an SE(3) element corresponding from a pose matrix.
-        The rotation is fitted to the closest rotation matrix, the bottom row of a 4x4 matrix is ignored.
+        The rotation is fitted to the closest rotation matrix, the bottom row of the 4x4 matrix is ignored.
 
         :param T: 4x4 or 3x4 pose matrix.
         :return: The SE(3) element.
@@ -284,7 +284,7 @@ class SE3:
         which transfers it to the corresponding Lie group element.
 
         :param xi_vec: 6d tangent space column vector xi_vec = [rho_vec, theta_vec]^T.
-        :return: Corresponding SO(3) element
+        :return: Corresponding SE(3) element
         """
         xi_hat = SE3.hat(xi_vec)
         theta = np.linalg.norm(xi_vec[3:])
