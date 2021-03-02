@@ -3,13 +3,13 @@ from pylie import SO2
 
 
 class SE2:
-    """Represents an element of the SO(2) Lie group (rotations in 2D)."""
+    """Represents an element of the SE(2) Lie group (poses in 2D)."""
 
     def __init__(self, pose_tuple=(SO2(), np.zeros((2, 1)))):
-        """Constructs an SO(2) element.
-        The default is the identity element theta=0.
+        """Constructs an SE(2) element.
+        The default is the identity element.
 
-        :param angle: The rotation angle in radians (optional).
+        :param pose_tuple: A tuple (rotation (SO2), translation (2D column vector) (optional).
         """
         self.rotation, self.translation = pose_tuple
 
@@ -26,7 +26,7 @@ class SE2:
 
     @property
     def rotation(self):
-        """ The so2 rotation, an element of SO(2)
+        """ The rotation, an element of SO(2)
 
         :return: An SO2 object corresponding to the orientation.
         """
@@ -65,7 +65,7 @@ class SE2:
     def to_matrix(self):
         """Return the matrix representation of this element.
 
-        :return: 2x2 SO(2) matrix
+        :return: 3x3 SE(2) matrix
         """
         T = np.identity(3)
         T[0:2, 0:2] = self.rotation.to_matrix()
@@ -122,7 +122,7 @@ class SE2:
     def jac_Y_ominus_X_wrt_X(Y, X):
         """Compute the Jacobian of Y.ominus(X) with respect to the element X.
 
-        :param X: The SE(3) element X.
+        :param X: The SE(2) element X.
         :return: The Jacobian (3x3 matrix)
         """
         return -SE2.jac_left_inverse(Y - X)
@@ -172,7 +172,7 @@ class SE2:
     def oplus(X, xi_vec):
         """Computes the right perturbation of Exp(theta_vec) on the element X.
 
-        :param theta_vec: The tangent space vector, a 2D column vector.
+        :param theta_vec: The tangent space vector, a 3D column vector.
         :return: The perturbed SE2 element Y = X :math:`\\oplus` theta_vec.
         """
 
@@ -195,7 +195,7 @@ class SE2:
         """Add operator performs the "oplus" operation on the element X.
 
         :param theta_vec: The tangent space vector, a 3D column vector.
-        :return: The perturbed SO3 element Y = X :math:`\\oplus` theta_vec.
+        :return: The perturbed SE3 element Y = X :math:`\\oplus` theta_vec.
         """
         return self.oplus(theta_vec)
 
@@ -210,20 +210,20 @@ class SE2:
     def __mul__(self, other):
         """Multiplication operator performs action on vectors.
 
-        :param other: 3D column vector, or a matrix of 3D column vectors
-        :return: Transformed 3D column vectors
+        :param other: 2D column vector, or a matrix of 2D column vectors
+        :return: Transformed 2D column vectors
         """
         if isinstance(other, np.ndarray) and other.shape[0] == 2:
-            # Other is matrix of 3D column vectors, perform action on vectors.
+            # Other is matrix of 2D column vectors, perform action on vectors.
             return self.action(other)
         else:
             raise TypeError('Argument must be a matrix of 3D column vectors')
 
     def __matmul__(self, other):
-        """Matrix multiplication operator performs composition on elements of SO(3).
+        """Matrix multiplication operator performs composition on elements of SE(2).
 
-        :param other: Other SO3
-        :return: Composed SO3
+        :param other: Other SE2
+        :return: Composed SE2
         """
         if isinstance(other, SE2):
             # Other is SE2, perform composition.
@@ -235,7 +235,7 @@ class SE2:
         """Length operator returns the dimension of the tangent vector space,
         which is equal to the number of degrees of freedom (DOF).
 
-        :return: The DOF for rotations (3)
+        :return: The DOF for SE(2) (3)
         """
         return 3
 
@@ -260,7 +260,7 @@ class SE2:
         """Performs the hat operator on the tangent space vector xi_vec,
         which returns the corresponding Lie Algebra matrix xi_hat.
 
-        :param xi_vec: 3d tangent space column vector xi_vec = [rho_vec, theta]^T.
+        :param xi_vec: 3D tangent space column vector xi_vec = [rho_vec, theta]^T.
         :return: The Lie Algebra (3x3 matrix).
         """
         return np.block([[SO2.hat(xi_vec[2].item()), xi_vec[:2]],
@@ -272,7 +272,7 @@ class SE2:
         which returns the corresponding tangent space vector.
 
         :param xi_hat: The Lie Algebra (3x3 matrix)
-        :return: 3d tangent space column vector xi_vec = [rho_vec, theta]^T.
+        :return: 3D tangent space column vector xi_vec = [rho_vec, theta]^T.
         """
         return np.vstack((xi_hat[:2, 2:3], SO2.vee(xi_hat[:2, :2])))
 
@@ -281,7 +281,7 @@ class SE2:
         """Computes the Exp-map on the Lie algebra vector xi_vec,
         which transfers it to the corresponding Lie group element.
 
-        :param xi_vec: 3d tangent space column vector xi_vec = [rho_vec, theta]^T.
+        :param xi_vec: 3D tangent space column vector xi_vec = [rho_vec, theta]^T.
         :return: Corresponding SE(2) element
         """
         rho_vec = xi_vec[:2]
@@ -374,7 +374,7 @@ class SE2:
         """Compute the Jacobian of X.oplus(tau) with respect to the element X
 
         :param xi_vec: The tangent space 3D column vector xi_vec = [rho_vec, theta]^T.
-        :return: The Jacobian (6x6 matrix)
+        :return: The Jacobian (3x3 matrix)
         """
         return SE2.Exp(xi_vec).inverse().adjoint()
 

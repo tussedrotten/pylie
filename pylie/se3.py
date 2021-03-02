@@ -9,7 +9,7 @@ class SE3:
         """Constructs an SE(3) element.
         The default is the identity element.
 
-        :param pose_tuple: A tuple (rot3, t) (optional).
+        :param pose_tuple: A tuple (rotation (SO3), translation (3D column vector) (optional).
         """
         self.rotation, self.translation = pose_tuple
 

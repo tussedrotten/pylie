@@ -7,7 +7,7 @@ class SO2:
 
     def __init__(self, angle=0.0):
         """Constructs an SO(2) element.
-        The default is the identity element theta=0.
+        The default is the identity element I (angle=0).
 
         :param angle: The rotation angle in radians (optional).
         """
@@ -18,7 +18,7 @@ class SO2:
         """Construct an SO(2) element from a matrix.
         The rotation is fitted to the closest rotation matrix
 
-        :param T: 2x2 rotation matrix.
+        :param R: 2x2 rotation matrix.
         :return: The SO(2) element.
         """
         R = to_rotation_matrix(R)
@@ -28,7 +28,7 @@ class SO2:
     def angle(self):
         """ The angle representation of the SO(2) element
 
-        :return: The angle corresponding to this SO(3) element in radians.
+        :return: The angle corresponding to this SO(2) element in radians.
         """
         return self._angle
 
@@ -68,17 +68,17 @@ class SO2:
         return SO2(-self.angle)
 
     def action(self, x):
-        """Perform the action of the SO(3) element on the 3D column vector x.
+        """Perform the action of the SO(2) element on the 2D column vector x.
 
-        :param x: 3D column vector to be transformed (or a matrix of 3D column vectors)
-        :return: The resulting rotated 3D column vectors
+        :param x: 2D column vector to be transformed (or a matrix of 2D column vectors)
+        :return: The resulting rotated 2D column vectors
         """
         return self.to_matrix() @ x
 
     def compose(self, Y):
         """Compose this element with another element on the right
 
-        :param Y: The other SO3 element
+        :param Y: The other SO2 element
         :return: This element composed with Y
         """
         return SO2(self.angle + Y.angle)
@@ -92,8 +92,8 @@ class SO2:
     def oplus(self, theta):
         """Computes the right perturbation of Exp(theta_vec) on the element X.
 
-        :param theta_vec: The tangent space vector, a 3D column vector.
-        :return: The perturbed SO3 element Y = X :math:`\\oplus` theta_vec.
+        :param theta_vec: The tangent space vector, a 1D column vector.
+        :return: The perturbed SO2 element Y = X :math:`\\oplus` theta.
         """
 
         return self @ SO2.Exp(theta)
@@ -145,13 +145,13 @@ class SO2:
         """
         return np.array([1.0])
 
-    def __add__(self, theta_vec):
+    def __add__(self, theta):
         """Add operator performs the "oplus" operation on the element X.
 
-        :param theta_vec: The tangent space vector, a 3D column vector.
-        :return: The perturbed SO3 element Y = X :math:`\\oplus` theta_vec.
+        :param theta: The tangent space vector, a 1D column vector.
+        :return: The perturbed SO3 element Y = X :math:`\\oplus` theta.
         """
-        return self.oplus(theta_vec)
+        return self.oplus(theta)
 
     def __sub__(self, X):
         """Subtract operator performs the "ominus" operation at X between X and this element Y.
@@ -164,32 +164,32 @@ class SO2:
     def __mul__(self, other):
         """Multiplication operator performs action on vectors.
 
-        :param other: 3D column vector, or a matrix of 3D column vectors
-        :return: Transformed 3D column vectors
+        :param other: 2D column vector, or a matrix of 2D column vectors
+        :return: Transformed 2D column vectors
         """
         if isinstance(other, np.ndarray) and other.shape[0] == 2:
-            # Other is matrix of 3D column vectors, perform action on vectors.
+            # Other is matrix of 2D column vectors, perform action on vectors.
             return self.action(other)
         else:
-            raise TypeError('Argument must be a matrix of 3D column vectors')
+            raise TypeError('Argument must be a matrix of 2D column vectors')
 
     def __matmul__(self, other):
-        """Matrix multiplication operator performs composition on elements of SO(3).
+        """Matrix multiplication operator performs composition on elements of SO(2).
 
-        :param other: Other SO3
-        :return: Composed SO3
+        :param other: Other SO2
+        :return: Composed SO2
         """
         if isinstance(other, SO2):
-            # Other is SO3, perform composition.
+            # Other is SO2, perform composition.
             return self.compose(other)
         else:
-            raise TypeError('Argument must be an SO3')
+            raise TypeError('Argument must be an SO2')
 
     def __len__(self):
         """Length operator returns the dimension of the tangent vector space,
         which is equal to the number of degrees of freedom (DOF).
 
-        :return: The DOF for rotations (3)
+        :return: The DOF for SO(2) (1)
         """
         return 1
 
@@ -214,8 +214,8 @@ class SO2:
         """Performs the hat operator on the tangent space vector theta_vec,
         which returns the corresponding skew symmetric Lie Algebra matrix theta_hat.
 
-        :param theta_vec: 3d tangent space column vector.
-        :return: The Lie Algebra (3x3 matrix).
+        :param theta_vec: 1D tangent space column vector.
+        :return: The Lie Algebra (2x2 matrix).
         """
         return np.array([[0, -theta],
                          [theta, 0]])
@@ -225,8 +225,8 @@ class SO2:
         """Performs the vee operator on the skew symmetric Lie Algebra matrix theta_hat,
         which returns the corresponding tangent space vector.
 
-        :param theta_hat: The Lie Algebra (3x3 matrix)
-        :return: 3d tangent space column vector.
+        :param theta_hat: The Lie Algebra (2x2 matrix)
+        :return: 1D tangent space column vector.
         """
         return theta_hat[1, 0].item()
 
@@ -235,8 +235,8 @@ class SO2:
         """Computes the Exp-map on the Lie algebra vector theta_vec,
         which transfers it to the corresponding Lie group element.
 
-        :param theta_vec: 3d tangent space column vector.
-        :return: Corresponding SO(3) element
+        :param theta_vec: 1D tangent space column vector.
+        :return: Corresponding SO(2) element
         """
         return SO2(theta)
 
@@ -288,7 +288,7 @@ class SO2:
     def jac_left_inverse(theta_vec):
         """Compute the left derivative of Log(X) with respect to X for theta_vec = Log(X).
 
-        :param theta_vec: The tangent space 3D column vector.
+        :param theta_vec: The tangent space 1D column vector.
         :return: The Jacobian (1x1 matrix)
         """
         return np.array([1.0])
