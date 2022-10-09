@@ -100,12 +100,17 @@ class SO3:
         """
         R = self.matrix
 
-        theta = np.arccos(np.clip(0.5 * (R.trace() - 1), -1, 1))
+        x = np.clip(0.5 * (R.trace() - 1), -1, 1)
 
-        if theta < 1e-10:
+        if x > 1 - 1e-10:
             theta = 0
             u_vec = np.array([[0, 0, 0]]).T
+        elif x < -(1 - 1e-10):
+            theta = np.pi
+            u_vec = SO3.vee(R - R.T)
+            u_vec /= np.linalg.norm(u_vec)
         else:
+            theta = np.arccos(x)
             u_vec = SO3.vee(R - R.T) / (2 * np.sin(theta))
 
         if split_angle_axis:
