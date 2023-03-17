@@ -436,3 +436,21 @@ def test_string_representation_is_matrix():
 
     # Should be the same as the string representation of the matrix.
     np.testing.assert_equal(str(X), str(X.matrix))
+
+
+def test_log_for_pi():
+    theta = np.pi - 1e-8
+    np.random.seed(42)
+
+    for i in range(100):
+        u = np.random.rand(3)[None].T
+        u /= np.linalg.norm(u)
+        X = SO3.Exp(theta*u)
+
+        theta_, u_ = X.Log(split_angle_axis=True)
+        np.testing.assert_almost_equal(theta_, theta)
+        np.testing.assert_almost_equal(u_, u)
+
+        theta_u = X.Log()
+        np.testing.assert_almost_equal(np.linalg.norm(theta_u), theta)
+        np.testing.assert_almost_equal(theta_u/np.linalg.norm(theta_u), u)
