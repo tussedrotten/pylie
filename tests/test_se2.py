@@ -4,13 +4,13 @@ from pylie import SO2, SE2
 
 def test_construct_identity_with_no_args():
     se2 = SE2()
-    np.testing.assert_equal(se2.rotation.angle, 0.0)
+    np.testing.assert_equal(se2.rotation.angle(), 0.0)
     np.testing.assert_equal(se2.rotation.to_matrix(), np.identity(2))
     np.testing.assert_equal(se2.translation, np.zeros((2, 1)))
 
 
 def test_construct_with_tuple():
-    so2 = SO2(0.1)
+    so2 = SO2.from_angle(0.1)
     t = np.array([[1, 2]]).T
     se2 = SE2((so2, t))
 
@@ -19,7 +19,7 @@ def test_construct_with_tuple():
 
 
 def test_construct_with_matrix():
-    so2 = SO2(np.pi / 10)
+    so2 = SO2.from_angle(np.pi / 10)
     t = np.array([[1, 2]]).T
     T = np.block([[so2.to_matrix(), t],
                   [0, 0,  1]])
@@ -31,7 +31,7 @@ def test_construct_with_matrix():
 
 
 def test_to_matrix():
-    so2 = SO2(np.pi / 4)
+    so2 = SO2.from_angle(np.pi / 4)
     t = np.array([[3, 2]]).T
     se2 = SE2((so2, t))
     T = se2.to_matrix()
@@ -42,7 +42,7 @@ def test_to_matrix():
 
 
 def test_to_tuple():
-    so2 = SO2(-np.pi / 3)
+    so2 = SO2.from_angle(-np.pi / 3)
     t = np.array([[-1, 1]]).T
     se2 = SE2((so2, t))
     pose_tuple = se2.to_tuple()
@@ -52,7 +52,7 @@ def test_to_tuple():
 
 
 def test_composition_with_identity():
-    X = SE2((SO2(np.pi / 10), np.array([[3, 1]]).T))
+    X = SE2((SO2.from_angle(np.pi / 10), np.array([[3, 1]]).T))
 
     comp_with_identity = X.compose(SE2())
     comp_from_identity = SE2().compose(X)
@@ -62,12 +62,12 @@ def test_composition_with_identity():
 
 
 def test_composition():
-    X = SE2((SO2(-np.pi / 2), np.array([[1, 2]]).T))
-    Y = SE2((SO2(3 * np.pi / 2), np.array([[0, 1]]).T))
+    X = SE2((SO2.from_angle(-np.pi / 2), np.array([[1, 2]]).T))
+    Y = SE2((SO2.from_angle(3 * np.pi / 2), np.array([[0, 1]]).T))
 
     Z = X.compose(Y)
 
-    rot_expected = SO2(np.pi)
+    rot_expected = SO2.from_angle(np.pi)
     t_expected = np.array([[2, 2]]).T
 
     np.testing.assert_almost_equal(Z.rotation.to_matrix(), rot_expected.to_matrix(), 14)
@@ -75,12 +75,12 @@ def test_composition():
 
 
 def test_composition_with_operator():
-    X = SE2((SO2(np.pi), np.array([[1, 2]]).T))
-    Y = SE2((SO2(-np.pi / 2), np.array([[-1, 0]]).T))
+    X = SE2((SO2.from_angle(np.pi), np.array([[1, 2]]).T))
+    Y = SE2((SO2.from_angle(-np.pi / 2), np.array([[-1, 0]]).T))
 
     Z = X @ Y
 
-    rot_expected = SO2(np.pi / 2)
+    rot_expected = SO2.from_angle(np.pi / 2)
     t_expected = np.array([[2, 2]]).T
 
     np.testing.assert_almost_equal(Z.rotation.to_matrix(), rot_expected.to_matrix(), 14)
@@ -88,7 +88,7 @@ def test_composition_with_operator():
 
 
 def test_inverse():
-    X = SE2((SO2(np.pi / 4), np.array([[1, -2]]).T))
+    X = SE2((SO2.from_angle(np.pi / 4), np.array([[1, -2]]).T))
 
     X_inv = X.inverse()
 
@@ -103,13 +103,13 @@ def test_action_on_vectors():
     unit_y = np.array([[0, 1]]).T
     t = np.array([[3, 1]]).T
 
-    X = SE2((SO2(np.pi / 2), t))
+    X = SE2((SO2.from_angle(np.pi / 2), t))
 
     np.testing.assert_almost_equal(X.action(unit_x), unit_y + t, 14)
 
 
 def test_action_on_vectors_with_operator():
-    X = SE2((SO2(3 * np.pi / 2), np.array([[1, 2]]).T))
+    X = SE2((SO2.from_angle(3 * np.pi / 2), np.array([[1, 2]]).T))
     x = np.array([[-1, 0]]).T
 
     vec_expected = np.array([[1, 3]]).T
@@ -140,7 +140,7 @@ def test_vee():
 def test_adjoint():
     np.testing.assert_equal(SE2().adjoint(), np.identity(3))
 
-    X = SE2((SO2(3 * np.pi / 2), np.array([[1, 2]]).T))
+    X = SE2((SO2.from_angle(3 * np.pi / 2), np.array([[1, 2]]).T))
     Adj = X.adjoint()
 
     np.testing.assert_almost_equal(Adj[:2, :2], X.rotation.to_matrix(), 14)
@@ -160,6 +160,22 @@ def test_log_with_no_rotation():
     np.testing.assert_equal(xi_vec[2].item(), 0)
 
 
+def test_log_with_rotation():
+    theta = np.pi / 2
+    trans = np.array([[-1, 2]]).T
+
+    so2 = SO2.from_angle(theta)
+    X = SE2((so2, trans))
+
+    xi_vec = X.Log()
+
+    # For theta = np.pi/2 and trans = np.array([[-1, 2]]).T,  we have:
+    np.testing.assert_almost_equal(xi_vec[:2].flatten(), 0.25 * np.pi * np.array([1, 3]), 14)
+
+    # Rotation part:
+    np.testing.assert_equal(xi_vec[2].item(), so2.angle())
+
+
 def test_exp_with_no_rotation():
     rho_vec = np.array([[1, 2]]).T
     theta = 0.0
@@ -167,8 +183,22 @@ def test_exp_with_no_rotation():
 
     X = SE2.Exp(xi_vec)
 
-    np.testing.assert_equal(X.rotation.to_matrix(), np.identity(2))
+    np.testing.assert_equal(X.rotation.angle(), theta)
     np.testing.assert_equal(X.translation, rho_vec)
+
+
+def test_exp_with_rotation():
+    rho_vec = np.array([[1, 2]]).T
+    theta = -np.pi/5
+    xi_vec = np.vstack((rho_vec, theta))
+
+    X = SE2.Exp(xi_vec)
+
+    # Translation part (computed from theta = -np.pi/5, rho_vec = np.array([[1, 2]]).T):
+    np.testing.assert_almost_equal(X.translation.flatten(), np.array([1.54340707162413, 1.56701967365953]), 14)
+
+    # Rotation part:
+    np.testing.assert_equal(X.rotation.angle(), SO2.from_angle(theta).angle())
 
 
 def test_log_of_exp():
@@ -182,14 +212,14 @@ def test_log_of_exp():
 
 
 def test_exp_of_log():
-    X = SE2((SO2(np.pi / 10), np.array([[2, 1]]).T))
+    X = SE2((SO2.from_angle(np.pi / 10), np.array([[2, 1]]).T))
     xi_vec = X.Log()
 
     np.testing.assert_almost_equal(SE2.Exp(xi_vec).to_matrix(), X.to_matrix(), 14)
 
 
 def test_ominus_with_oplus_diff():
-    X = SE2((SO2(np.pi / 10), np.array([[3, 2]]).T))
+    X = SE2((SO2.from_angle(np.pi / 10), np.array([[3, 2]]).T))
 
     rho_vec = np.array([[4, 3]]).T
     theta = 2 * np.pi / 3
@@ -202,8 +232,8 @@ def test_ominus_with_oplus_diff():
 
 
 def test_oplus_with_ominus_diff():
-    X = SE2((SO2(-np.pi / 5), np.array([[2, 1]]).T))
-    Y = SE2((SO2(np.pi / 7), np.array([[1, 0]]).T))
+    X = SE2((SO2.from_angle(-np.pi / 5), np.array([[2, 1]]).T))
+    Y = SE2((SO2.from_angle(np.pi / 7), np.array([[1, 0]]).T))
 
     xi_vec_diff = Y.ominus(X)
     Y_from_X = X.oplus(xi_vec_diff)
@@ -212,7 +242,7 @@ def test_oplus_with_ominus_diff():
 
 
 def test_ominus_with_oplus_diff_with_operators():
-    X = SE2((SO2(np.pi / 7), np.array([[1, 0]]).T))
+    X = SE2((SO2.from_angle(np.pi / 7), np.array([[1, 0]]).T))
 
     rho_vec = np.array([[1, 3]]).T
     theta = 2 * np.pi / 3
@@ -225,7 +255,9 @@ def test_ominus_with_oplus_diff_with_operators():
 
 
 def test_jacobian_inverse():
-    X = SE2((SO2(np.pi / 7), np.array([[2, 1]]).T))
+    theta_x = np.pi / 7
+    trans_x = np.array([[2, 1]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
 
     J_inv = X.jac_inverse_X_wrt_X()
 
@@ -239,7 +271,9 @@ def test_jacobian_inverse():
 
 
 def test_jacobian_action_Xx_wrt_X():
-    X = SE2((SO2(np.pi / 8), np.array([[1, 1]]).T))
+    theta_x = np.pi / 8
+    trans_x = np.array([[1, 1]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
     x = np.array([[1, 2]]).T
 
     J_action_X = X.jac_action_Xx_wrt_X(x)
@@ -254,7 +288,9 @@ def test_jacobian_action_Xx_wrt_X():
 
 
 def test_jacobian_action_Xx_wrt_x():
-    X = SE2((SO2(np.pi / 8), np.array([[2, 1]]).T))
+    theta_x = -np.pi / 5
+    trans_x = np.array([[2, 1]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
     x = np.array([[2, 3]]).T
 
     J_action_x = X.jac_action_Xx_wrt_x()
@@ -269,8 +305,13 @@ def test_jacobian_action_Xx_wrt_x():
 
 
 def test_jacobian_composition_XY_wrt_X():
-    X = SE2((SO2(np.pi / 10), np.array([[2, 1]]).T))
-    Y = SE2((SO2(np.pi / 7), np.array([[1, 0]]).T))
+    theta_x = np.pi / 10
+    trans_x = np.array([[2, 1]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
+
+    theta_y = np.pi / 7
+    trans_y = np.array([[1, 0]]).T
+    Y = SE2((SO2.from_angle(theta_y), trans_y))
 
     J_comp_X = X.jac_composition_XY_wrt_X(Y)
 
@@ -284,8 +325,13 @@ def test_jacobian_composition_XY_wrt_X():
 
 
 def test_jacobian_composition_XY_wrt_Y():
-    X = SE2((SO2(np.pi / 10), np.array([[3, 2]]).T))
-    Y = SE2((SO2(np.pi / 7), np.array([[1, 0]]).T))
+    theta_x = -np.pi / 5
+    trans_x = np.array([[3, 2]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
+
+    theta_y = np.pi / 7
+    trans_y = np.array([[1, 0]]).T
+    Y = SE2((SO2.from_angle(theta_y), trans_y))
 
     J_comp_Y = X.jac_composition_XY_wrt_Y()
 
@@ -328,7 +374,7 @@ def test_jacobian_left():
 
 
 def test_jacobian_right_inverse():
-    X = SE2((SO2(np.pi / 8), np.array([[1, 1]]).T))
+    X = SE2((SO2.from_angle(np.pi / 8), np.array([[1, 1]]).T))
     xi_vec = X.Log()
 
     J_r_inv = SE2.jac_right_inverse(xi_vec)
@@ -344,7 +390,7 @@ def test_jacobian_right_inverse():
 
 
 def test_jacobian_left_inverse():
-    X = SE2((SO2(np.pi / 8), np.array([[2, 1]]).T))
+    X = SE2((SO2.from_angle(np.pi / 8), np.array([[2, 1]]).T))
     xi_vec = X.Log()
 
     J_l_inv = SE2.jac_left_inverse(xi_vec)
@@ -356,7 +402,10 @@ def test_jacobian_left_inverse():
 
 
 def test_jacobian_X_oplus_tau_wrt_X():
-    X = SE2((SO2(np.pi / 10), np.array([[3, 2]]).T))
+    theta_x = np.pi / 10
+    trans_x = np.array([[3, 2]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
+
     rho_vec = np.array([[1, 2]]).T
     theta = np.pi / 4
     xi_vec = np.vstack((rho_vec, theta))
@@ -373,7 +422,10 @@ def test_jacobian_X_oplus_tau_wrt_X():
 
 
 def test_jacobian_X_oplus_tau_wrt_tau():
-    X = SE2((SO2(np.pi / 8), np.array([[1, 2]]).T))
+    theta_x = np.pi / 8
+    trans_x = np.array([[1, 2]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
+
     rho_vec = np.array([[2, 1]]).T
     theta = np.pi / 4
     xi_vec = np.vstack((rho_vec, theta))
@@ -390,8 +442,13 @@ def test_jacobian_X_oplus_tau_wrt_tau():
 
 
 def test_jacobian_Y_ominus_X_wrt_X():
-    X = SE2((SO2(np.pi / 8), np.array([[1, 1]]).T))
-    Y = SE2((SO2(np.pi / 7), np.array([[1, 0]]).T))
+    theta_x = np.pi / 8
+    trans_x = np.array([[1, 1]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
+
+    theta_y = np.pi / 7
+    trans_y = np.array([[1, 0]]).T
+    Y = SE2((SO2.from_angle(theta_y), trans_y))
 
     J_ominus_X = Y.jac_Y_ominus_X_wrt_X(X)
 
@@ -405,8 +462,13 @@ def test_jacobian_Y_ominus_X_wrt_X():
 
 
 def test_jacobian_Y_ominus_X_wrt_Y():
-    X = SE2((SO2(np.pi / 8), np.array([[1, 1]]).T))
-    Y = SE2((SO2(np.pi / 7), np.array([[2, 0]]).T))
+    theta_x = np.pi / 8
+    trans_x = np.array([[1, 1]]).T
+    X = SE2((SO2.from_angle(theta_x), trans_x))
+
+    theta_y = np.pi / 7
+    trans_y = np.array([[2, 0]]).T
+    Y = SE2((SO2.from_angle(theta_y), trans_y))
 
     J_ominus_Y = Y.jac_Y_ominus_X_wrt_Y(X)
 

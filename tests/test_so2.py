@@ -1,20 +1,64 @@
 import numpy as np
-
 from pylie import SO2
-
+import pytest
 
 def test_construct_identity_with_no_args():
     so2 = SO2()
-    np.testing.assert_equal(so2.angle, 0.0)
+    np.testing.assert_equal(so2.angle(), 0.0)
     np.testing.assert_array_equal(so2.to_matrix(), np.identity(2))
 
 
+def test_construct_with_real_and_imag_args():
+    angle = np.pi/10
+    real = np.cos(angle)
+    imag = np.sin(angle)
+    so2 = SO2(real, imag)
+    np.testing.assert_almost_equal(so2.real(), real, 16)
+    np.testing.assert_almost_equal(so2.imag(), imag, 16)
+    np.testing.assert_almost_equal(so2.angle(), angle, 16)
+
+
+def test_construct_with_unnormalised_real_and_imag_args():
+    angle = np.pi/5
+    real = np.cos(angle) * 10
+    imag = np.sin(angle) * 10
+    so2 = SO2(real, imag)
+    np.testing.assert_equal(so2.real(), real/10)
+    np.testing.assert_equal(so2.imag(), imag/10)
+    np.testing.assert_equal(so2.angle(), angle)
+
+
+def test_construct_with_zero_norm_fails():
+    with pytest.raises(ValueError):
+        SO2(0, 0)
+
+    with pytest.raises(ValueError):
+        SO2(1e-20, 1e-20)
+
+
+def test_construct_with_one_argument_fails():
+    with pytest.raises(ValueError):
+        so2 = SO2(1)
+
+    with pytest.raises(ValueError):
+        so2 = SO2(imag=1)
+
+    with pytest.raises(ValueError):
+        so2 = SO2(real=1)
+
+def test_construct_from_angle():
+    for i in np.arange(-12, 12):
+        theta = i/12 * 2 * np.pi
+        so2 = SO2.from_angle(theta)
+        np.testing.assert_almost_equal(so2.real(), np.cos(theta), 16)
+        np.testing.assert_almost_equal(so2.imag(), np.sin(theta), 16)
+
 def test_construct_from_matrix():
     theta = np.pi/3
-    R = SO2(theta).to_matrix()
+    R = SO2.from_angle(theta).to_matrix()
     so2 = SO2.from_matrix(R)
-    np.testing.assert_equal(so2.angle, theta)
-    np.testing.assert_array_equal(so2.to_matrix(), R)
+    np.testing.assert_equal(so2.angle(), theta)
+    np.testing.assert_array_almost_equal(so2.to_matrix(), R, 14)
 
     # Matrices not elements of SO(2) should be fitted to SO(2)
     R_noisy = R + 0.1 + np.random.rand(2)
@@ -43,25 +87,27 @@ def test_vee_extracts_correct_angle_from_skew_symmetric_matrix():
 
 
 def test_exp_returns_correct_rotation():
-    theta = 0.5 * np.pi
+    for i in np.arange(0, 12):
+        theta = i/12 * 2 * np.pi
+        so2 = SO2.Exp(theta)
+        np.testing.assert_almost_equal(so2.angle(), np.arctan2(np.sin(theta), np.cos(theta)), 14)
 
+    theta = 2 * np.pi
     so2 = SO2.Exp(theta)
-
-    np.testing.assert_equal(so2.angle, theta)
+    np.testing.assert_almost_equal(so2.angle(), 0, 14)
 
 
 def test_log_returns_correct_theta():
-    theta = np.pi / 6
+    for i in np.arange(0, 12):
+        theta = i/12 * 2 * np.pi
+        so2 = SO2.Exp(theta)
+        theta_log = so2.Log()
 
-    so3 = SO2.Exp(theta)
-
-    theta_log = so3.Log()
-
-    np.testing.assert_almost_equal(theta_log, theta, 14)
+        np.testing.assert_almost_equal(theta_log, so2.angle(), 16)
 
 
 def test_inverse_returns_transposed():
-    so2 = SO2(np.pi / 4)
+    so2 = SO2.from_angle(np.pi / 4)
     so2_inv = so2.inverse()
 
     np.testing.assert_almost_equal(so2_inv.to_matrix(), so2.to_matrix().T, 14)
@@ -71,20 +117,20 @@ def test_inverse_returns_transposed():
 def test_action_on_vector_works():
     unit_x = np.array([[1, 0]]).T
     unit_y = np.array([[0, 1]]).T
-    so2 = SO2(np.pi / 2)
+    so2 = SO2.from_angle(np.pi / 2)
 
     np.testing.assert_almost_equal(so2.action(unit_x), unit_y, 14)
 
 
 def test_action_on_vector_with_operator_works():
     unit_x = np.array([[1, 0]]).T
-    so2 = SO2(np.pi)
+    so2 = SO2.from_angle(np.pi)
 
     np.testing.assert_almost_equal(so2 * unit_x, -unit_x, 14)
 
 
 def test_composition_with_identity_works():
-    so2 = SO2(np.pi / 4)
+    so2 = SO2.from_angle(np.pi / 4)
 
     comp_with_identity = so2.compose(SO2())
     comp_from_identity = SO2().compose(so2)
@@ -94,8 +140,8 @@ def test_composition_with_identity_works():
 
 
 def test_composition_returns_correct_rotation():
-    so2_180 = SO2(np.pi)
-    so2_90 = SO2(np.pi / 2)
+    so2_180 = SO2.from_angle(np.pi)
+    so2_90 = SO2.from_angle(np.pi / 2)
 
     so2_comp = so2_180.compose(so2_90)
 
@@ -106,7 +152,7 @@ def test_composition_returns_correct_rotation():
 
 
 def test_composition_with_operator_works():
-    so2_45 = SO2(np.pi / 4)
+    so2_45 = SO2.from_angle(np.pi / 4)
 
     so2_comp = so2_45 @ so2_45
 
@@ -118,7 +164,7 @@ def test_composition_with_operator_works():
 
 def test_adjoint_returns_rotation_one():
     so2_1 = SO2()
-    so2_2 = SO2(3 * np.pi / 4)
+    so2_2 = SO2.from_angle(3 * np.pi / 4)
 
     np.testing.assert_array_equal(so2_1.adjoint(), 1.0)
     np.testing.assert_array_equal(so2_2.adjoint(), 1.0)
@@ -161,7 +207,8 @@ def test_difference_for_simple_rotation_with_operator_works():
 
 
 def test_jacobian_inverse():
-    X = SO2(np.pi / 3)
+    theta = np.pi / 3
+    X = SO2.from_angle(theta)
 
     J_inv = X.jac_inverse_X_wrt_X()
 
@@ -175,8 +222,10 @@ def test_jacobian_inverse():
 
 
 def test_jacobian_composition_XY_wrt_X():
-    X = SO2(np.pi / 4)
-    Y = SO2(np.pi / 2)
+    theta_x = np.pi / 4
+    theta_y = np.pi / 2
+    X = SO2.from_angle(theta_x)
+    Y = SO2.from_angle(theta_y)
 
     J_comp_X = X.jac_composition_XY_wrt_X(Y)
 
@@ -190,8 +239,10 @@ def test_jacobian_composition_XY_wrt_X():
 
 
 def test_jacobian_composition_XY_wrt_Y():
-    X = SO2(np.pi / 4)
-    Y = SO2(-np.pi / 3)
+    theta_x = np.pi / 4
+    theta_y = -np.pi / 3
+    X = SO2.from_angle(theta_x)
+    Y = SO2.from_angle(theta_y)
 
     J_comp_Y = X.jac_composition_XY_wrt_Y()
 
@@ -205,7 +256,8 @@ def test_jacobian_composition_XY_wrt_Y():
 
 
 def test_jacobian_action_Xx_wrt_X():
-    X = SO2(3 * np.pi / 4)
+    theta_x = 3 * np.pi / 4
+    X = SO2.from_angle(theta_x)
     x = np.array([[1, 2]]).T
 
     J_action_X = X.jac_action_Xx_wrt_X(x)
@@ -220,7 +272,8 @@ def test_jacobian_action_Xx_wrt_X():
 
 
 def test_jacobian_action_Xx_wrt_x():
-    X = SO2(3 * np.pi / 4)
+    theta_x = 3 * np.pi / 4
+    X = SO2.from_angle(theta_x)
     x = np.array([[1, 2]]).T
 
     J_action_x = X.jac_action_Xx_wrt_x()
@@ -246,10 +299,12 @@ def test_jacobian_right():
 
 
 def test_jacobian_left():
-    theta = np.pi / 4
+    theta = np.pi / 5
+
+    J_l = SO2.jac_left(theta)
 
     # Should have J_l(theta) == J_r(-theta).
-    np.testing.assert_almost_equal(SO2.jac_left(theta), SO2.jac_right(-theta), 14)
+    np.testing.assert_almost_equal(J_l, SO2.jac_right(-theta), 14)
 
 
 def test_jacobian_right_inverse():
@@ -276,9 +331,10 @@ def test_jacobian_left_inverse():
 
 
 def test_jacobian_X_oplus_tau_wrt_X():
-    X = SO2(3 * np.pi / 4)
-    theta = np.pi / 4
+    theta_x = 3 * np.pi / 4
+    X = SO2.from_angle(theta_x)
 
+    theta = np.pi / 4
     J_oplus_X = X.jac_X_oplus_tau_wrt_X(theta)
 
     # Should be Exp(tau).adjoint().inverse()
@@ -291,9 +347,10 @@ def test_jacobian_X_oplus_tau_wrt_X():
 
 
 def test_jacobian_X_oplus_tau_wrt_tau():
-    X = SO2(np.pi / 4)
-    theta_vec = np.pi / 3
+    theta_x = np.pi / 4
+    X = SO2.from_angle(theta_x)
 
+    theta_vec = np.pi / 3
     J_oplus_tau = X.jac_X_oplus_tau_wrt_tau(theta_vec)
 
     # Should be J_r.
@@ -306,8 +363,10 @@ def test_jacobian_X_oplus_tau_wrt_tau():
 
 
 def test_jacobian_Y_ominus_X_wrt_X():
-    X = SO2(np.pi / 4)
-    Y = SO2(np.pi / 2)
+    theta_x = np.pi / 4
+    theta_y = np.pi / 2
+    X = SO2.from_angle(theta_x)
+    Y = SO2.from_angle(theta_y)
 
     J_ominus_X = Y.jac_Y_ominus_X_wrt_X(X)
 
@@ -321,8 +380,10 @@ def test_jacobian_Y_ominus_X_wrt_X():
 
 
 def test_jacobian_Y_ominus_X_wrt_Y():
-    X = SO2(np.pi / 4)
-    Y = SO2(np.pi / 3)
+    theta_x = np.pi / 4
+    theta_y = np.pi / 3
+    X = SO2.from_angle(theta_x)
+    Y = SO2.from_angle(theta_y)
 
     J_ominus_Y = Y.jac_Y_ominus_X_wrt_Y(X)
 

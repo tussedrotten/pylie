@@ -108,7 +108,7 @@ class SE2:
         """Computes the Jacobian of the action X.action(x) with respect to the element X.
 
         :param x: The 2D column vector x.
-        :return: The Jacobian (3x2 matrix)
+        :return: The Jacobian (2x3 matrix)
         """
         return np.block([[X.rotation.to_matrix(), X.rotation.to_matrix() @ SO2.hat(1) @ x]])
 
@@ -288,10 +288,10 @@ class SE2:
         theta = xi_vec[2].item()
 
         if np.abs(theta) < 1e-10:
-            return SE2((SO2(theta), rho_vec))
+            return SE2((SO2.Exp(theta), rho_vec))
 
         V = (np.sin(theta) / theta) * np.identity(2) + ((1 - np.cos(theta)) / theta) * SO2.hat(1)
-        return SE2((SO2(theta), V @ rho_vec))
+        return SE2((SO2.Exp(theta), V @ rho_vec))
 
     @staticmethod
     def jac_composition_XY_wrt_X(Y):
