@@ -5,67 +5,96 @@ from pylie.common import to_rotation_matrix
 class SO2:
     """Represents an element of the SO(2) Lie group (rotations in 2D)."""
 
-    def __init__(self, angle=0.0):
-        """Constructs an SO(2) element.
-        The default is the identity element I (angle=0).
+    def __init__(self, real=None, imag=None):
+        """Constructs a SO(2) element.
+        The default is the identity element I.
+        The rotation is represented by a unit complex number.
 
-        :param angle: The rotation angle in radians (optional).
+        :param real: The real part of a unit complex number.
+        :param imag: The imaginary part of a unit complex number.
         """
-        self.angle = angle
+        if real is None and imag is None:
+            # Default is identity element.
+            real = 1.0
+            imag = 0.0
+        elif real is None or imag is None:
+            raise ValueError("Both real and imag arguments must be provided")
+
+        real = np.array(real).item()
+        imag = np.array(imag).item()
+
+        self._coeffs = np.array([real, imag])
+        self.normalise()
+
+    @classmethod
+    def from_angle(cls, angle):
+        """Constructs a SO(2) element from a rotation angle.
+
+        :param angle: The rotation angle in radians.
+        """
+        angle = np.array(angle).item()
+        return cls(np.cos(angle), np.sin(angle))
 
     @classmethod
     def from_matrix(cls, R):
-        """Construct an SO(2) element from a matrix.
+        """Construct a SO(2) element from a matrix.
         The rotation is fitted to the closest rotation matrix
 
         :param R: 2x2 rotation matrix.
         :return: The SO(2) element.
         """
         R = to_rotation_matrix(R)
-        return cls(np.arctan2(R[1, 0], R[0, 0]))
+        return cls(R[0, 0], R[1, 0])
 
-    @property
+    def real(self):
+        """The real part of the unit complex number representing the rotation.
+        :return: The real part.
+        """
+        return self._coeffs[0]
+
+    def imag(self):
+        """The imaginary part of the unit complex number representing the rotation.
+        :return: The imaginary part.
+        """
+        return self._coeffs[1]
+
+    def normalise(self):
+        """Normalises the complex number representing the rotation to unit norm."""
+        norm = np.linalg.norm(self._coeffs)
+        if norm < 1e-16:
+            raise ValueError("Norm of representation is almost zero")
+        self._coeffs /= norm
+
     def angle(self):
         """ The angle representation of the SO(2) element
 
         :return: The angle corresponding to this SO(2) element in radians.
         """
-        return self._angle
-
-    @angle.setter
-    def angle(self, angle):
-        """Sets the angle corresponding to the element on SO(2)
-
-        :param angle: The angle in radians.
-        """
-        if isinstance(angle, np.ndarray):
-            angle = angle.item()
-
-        self._angle = angle % (2 * np.pi)
+        return np.arctan2(self.imag(), self.real())
 
     def to_matrix(self):
         """Return the matrix representation of this element.
 
         :return: 2x2 SO(2) matrix
         """
-        cos_theta = np.cos(self.angle)
-        sin_theta = np.sin(self.angle)
+        cos_theta = self.real()
+        sin_theta = self.imag()
 
         return np.array([[cos_theta, -sin_theta], [sin_theta, cos_theta]])
 
     def Log(self):
         """Computes the tangent space vector at the current element X.
 
-        :return: The tangent space vector theta_vec, or angle, axis if split_angle_axis is True.
+        :return: The tangent space vector theta_vec.
         """
-        return self.angle
+        return self.angle()
 
     def inverse(self):
         """Compute the inverse of the current element X.
 
         :return: The inverse of the current element.
         """
-        return SO2(-self.angle)
+        return SO2(self.real(), -self.imag())
 
     def action(self, x):
         """Perform the action of the SO(2) element on the 2D column vector x.
@@ -81,13 +110,16 @@ class SO2:
         :param Y: The other SO2 element
         :return: This element composed with Y
         """
-        return SO2(self.angle + Y.angle)
+        cmp_real = self.real() * Y.real() - self.imag() * Y.imag()
+        cmp_imag = self.real() * Y.imag() + self.imag() * Y.real()
+
+        return SO2(cmp_real, cmp_imag)
 
     def adjoint(self):
         """The adjoint at the element.
         :return: The adjoint, a 1x1 matrix.
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     def oplus(self, theta):
         """Computes the right perturbation of Exp(theta_vec) on the element X.
@@ -105,14 +137,14 @@ class SO2:
         :return: The difference theta_vec = Y :math:'\\ominus' X
         """
 
-        return self.angle - X.angle
+        return (X.inverse() @ self).Log()
 
     def jac_inverse_X_wrt_X(X):
         """Computes the Jacobian of the inverse operation X.inverse() with respect to the element X.
 
         :return: The Jacobian (1x1 matrix)
         """
-        return -np.array([1.0])
+        return -np.array([[1.0]])
 
     def jac_action_Xx_wrt_X(X, x):
         """Computes the Jacobian of the action X.action(x) with respect to the element X.
@@ -135,7 +167,7 @@ class SO2:
         :param X: The SO(2) element X.
         :return: The Jacobian (1x1 matrix)
         """
-        return -np.array([1.0])
+        return -np.array([[1.0]])
 
     def jac_Y_ominus_X_wrt_Y(Y, X):
         """Compute the Jacobian of Y.ominus(X) with respect to the element Y.
@@ -143,7 +175,7 @@ class SO2:
         :param X: The SO(2) element X.
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     def __add__(self, theta):
         """Add operator performs the "oplus" operation on the element X.
@@ -235,10 +267,10 @@ class SO2:
         """Computes the Exp-map on the Lie algebra vector theta_vec,
         which transfers it to the corresponding Lie group element.
 
-        :param theta_vec: 1D tangent space column vector.
+        :param theta: 1D tangent space column vector.
         :return: Corresponding SO(2) element
         """
-        return SO2(theta)
+        return SO2.from_angle(theta)
 
     @staticmethod
     def jac_composition_XY_wrt_X(Y):
@@ -247,7 +279,7 @@ class SO2:
         :param Y: SO3 element Y
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     @staticmethod
     def jac_composition_XY_wrt_Y():
@@ -255,7 +287,7 @@ class SO2:
 
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     @staticmethod
     def jac_right(theta_vec):
@@ -264,7 +296,7 @@ class SO2:
         :param theta_vec: The tangent space 1D column vector.
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     @staticmethod
     def jac_left(theta_vec):
@@ -273,7 +305,7 @@ class SO2:
         :param theta_vec: The tangent space 1D column vector.
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     @staticmethod
     def jac_right_inverse(theta_vec):
@@ -282,7 +314,7 @@ class SO2:
         :param theta_vec: The tangent space 1D column vector.
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     @staticmethod
     def jac_left_inverse(theta_vec):
@@ -291,7 +323,7 @@ class SO2:
         :param theta_vec: The tangent space 1D column vector.
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     @staticmethod
     def jac_X_oplus_tau_wrt_X(theta_vec):
@@ -300,7 +332,7 @@ class SO2:
         :param theta_vec: The tangent space 1D column vector.
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
 
     @staticmethod
     def jac_X_oplus_tau_wrt_tau(theta_vec):
@@ -309,4 +341,4 @@ class SO2:
         :param theta_vec: The tangent space 1D column vector.
         :return: The Jacobian (1x1 matrix)
         """
-        return np.array([1.0])
+        return np.array([[1.0]])
