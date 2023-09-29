@@ -100,6 +100,12 @@ class SO3:
         """
         R = self.matrix
 
+        u_vec = SO3.vee(R - R.T)
+        if np.linalg.norm(u_vec) == 0:
+            # If symmetric use eigenvector:
+            eig_vals, eig_vecs = np.linalg.eigh(R)
+            u_vec = eig_vecs[:, eig_vals == 1.]
+
         x = np.clip(0.5 * (R.trace() - 1), -1, 1)
 
         if x > 1 - 1e-10:
@@ -107,11 +113,10 @@ class SO3:
             u_vec = np.array([[0, 0, 0]]).T
         elif x < -(1 - 1e-10):
             theta = np.pi
-            u_vec = SO3.vee(R - R.T)
             u_vec /= np.linalg.norm(u_vec)
         else:
             theta = np.arccos(x)
-            u_vec = SO3.vee(R - R.T) / (2 * np.sin(theta))
+            u_vec = u_vec / (2 * np.sin(theta))
 
         if split_angle_axis:
             return theta, u_vec
