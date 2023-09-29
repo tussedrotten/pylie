@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pylie',
-    version='1.0.0',
+    version='1.0.1',
     description='A small Lie library for Python',
     author='Trym Vegard Haavardsholm',
     license='BSD-3-Clause',
