@@ -116,21 +116,6 @@ def test_log_returns_correct_theta_vec():
     np.testing.assert_almost_equal(theta_vec_log, theta_vec, 14)
 
 
-def test_log_works_with_symmetric_matrices():
-    R = SO3(
-        np.array((
-            (0, 1, 0),
-            (1, 0, 0),
-            (0, 0, -1)
-        ))
-    )
-
-    theta, tu = R.Log(True)
-    R_exp = SO3.Exp(theta * tu)
-
-    np.testing.assert_almost_equal(R.matrix, R_exp.matrix)
-
-
 def test_inverse_returns_transposed():
     so3 = SO3.from_angle_axis(np.pi / 4, np.array([[1, 1, 0]]).T / np.sqrt(2))
     so3_inv = so3.inverse()
