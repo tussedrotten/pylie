@@ -41,8 +41,8 @@ def vis_perturbations():
                          draw_options.values())
     radio = RadioButtons(plt.axes([0.025, 0.3, 0.24, 0.2], facecolor=widget_color),
                          (r'1. $\mathrm{Exp}(\mathbf{\xi})$',
-                          r'2. $\mathbf{T}_{wc} \circ \mathrm{Exp}(\mathbf{\xi})$',
-                          r'3. $\mathrm{Exp}(\mathbf{\xi}) \circ \mathbf{T}_{wc}$'),
+                          r'2. $\mathbf{T}_{wa} \circ \mathrm{Exp}(\mathbf{\xi})$',
+                          r'3. $\mathrm{Exp}(\mathbf{\xi}) \circ \mathbf{T}_{wa}$'),
                          active=0)
 
     # Setup the update callback, which is called by the sliders and the radio buttons.
@@ -103,7 +103,7 @@ def draw_right_perturbation(ax, T_w_a, xi_vec, draw_options):
     vg.plot_pose(ax, T_w_a.to_tuple(), scale=1, text='$\mathcal{F}_a$')
     T_r = T_w_a @ SE3.Exp(xi_vec)
 
-    vg.plot_pose(ax, T_r.to_tuple()) #, text=r'$\mathbf{T}_{wa} \circ \mathrm{Exp}(\mathbf{\xi})$')
+    vg.plot_pose(ax, T_r.to_tuple())
 
     if draw_options['Draw box']:
         box_points = vg.utils.generate_box(pose=T_r.to_tuple(), scale=1)
@@ -117,7 +117,7 @@ def draw_left_perturbation(ax, T_w_a, xi_vec, draw_options):
     vg.plot_pose(ax, SE3().to_tuple(), scale=1, text='$\mathcal{F}_w$')
     vg.plot_pose(ax, T_w_a.to_tuple(), scale=1, text='$\mathcal{F}_a$')
     T_l = SE3.Exp(xi_vec) @ T_w_a
-    vg.plot_pose(ax, T_l.to_tuple()) #, text=r'$\mathrm{Exp}(\mathbf{\xi}) \circ \mathbf{T}_{wa}$')
+    vg.plot_pose(ax, T_l.to_tuple())
 
     if draw_options['Draw box']:
         box_points = vg.utils.generate_box(pose=T_l.to_tuple(), scale=1)
