@@ -2,4 +2,5 @@ numpy
 pytest
 pyqt5
 setuptools
-https://github.com/tussedrotten/visgeom/archive/v0.1.3.zip
+matplotlib
+https://github.com/tussedrotten/visgeom/archive/v0.2.0.zip
